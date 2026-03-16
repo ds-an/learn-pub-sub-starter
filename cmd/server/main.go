@@ -19,11 +19,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer connection.Close()
-	channel, err := connection.Channel()
+	ch, err := connection.Channel()
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = pubsub.PublishJSON(channel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
+	err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
 		IsPaused: true,
 	})
 	if err != nil {
