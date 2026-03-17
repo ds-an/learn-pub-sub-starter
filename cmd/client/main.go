@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -32,9 +30,43 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("AMQP connection successful")
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
-	fmt.Println("Shutting down Peril client...")
+	gameState := gamelogic.NewGameState(username)
+
+	for {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		switch words[0] {
+		case "spawn":
+			err := gameState.CommandSpawn(words)
+			if err != nil {
+				log.Print(err)
+			}
+		case "move":
+			armyMove, err := gameState.CommandMove(words)
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+			log.Printf("Move %v executed", armyMove)
+		case "status":
+			gameState.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			log.Print("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			log.Print("No such command")
+		}
+	}
+
+	// fmt.Println("AMQP connection successful")
+	// signalChan := make(chan os.Signal, 1)
+	// signal.Notify(signalChan, os.Interrupt)
+	// <-signalChan
+	// fmt.Println("Shutting down Peril client...")
 }

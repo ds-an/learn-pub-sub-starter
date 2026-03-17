@@ -25,11 +25,11 @@ func main() {
 	}
 	gamelogic.PrintServerHelp()
 	for {
-		line := gamelogic.GetInput()
-		if len(line) == 0 {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
 			continue
 		}
-		switch line[0] {
+		switch words[0] {
 		case routing.PauseKey:
 			log.Printf("Sending \"%s\" message", routing.PauseKey)
 			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
