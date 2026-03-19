@@ -13,16 +13,22 @@ import (
 func main() {
 	fmt.Println("Starting Peril server...")
 	fmt.Println("Console on http://localhost:15672/")
-	const connectionString = "amqp://guest:guest@localhost:5672/"
-	connection, err := amqp.Dial(connectionString)
+	const connString = "amqp://guest:guest@localhost:5672/"
+	conn, err := amqp.Dial(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer connection.Close()
-	ch, err := connection.Channel()
+	defer conn.Close()
+	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilTopic, routing.GameLogSlug, routing.GameLogSlug + ".*", pubsub.QueueTypeDurable)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	gamelogic.PrintServerHelp()
 	for {
 		words := gamelogic.GetInput()

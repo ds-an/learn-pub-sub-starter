@@ -24,13 +24,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	gameState := gamelogic.NewGameState(username)
 	queueName := routing.PauseKey + "." + username
-	_, _, err = pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, queueName, routing.PauseKey, pubsub.QueueTypeTransient)
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilDirect,
+		queueName, routing.PauseKey,
+		pubsub.QueueTypeTransient,
+		handlerPause(gameState),
+		)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	gameState := gamelogic.NewGameState(username)
 
 	for {
 		words := gamelogic.GetInput()
