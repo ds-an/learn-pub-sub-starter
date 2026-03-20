@@ -18,6 +18,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ch.Close()
 
 	username, err := gamelogic.ClientWelcome()
 	if err != nil {
@@ -29,10 +34,24 @@ func main() {
 	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
-		queueName, routing.PauseKey,
+		queueName,
+		routing.PauseKey,
 		pubsub.QueueTypeTransient,
 		handlerPause(gameState),
-		)
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	queueNameArmyMoves := routing.ArmyMovesPrefix + "." + username
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		queueNameArmyMoves,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.QueueTypeTransient,
+		handlerMove(gameState),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +73,16 @@ func main() {
 				log.Print(err)
 				continue
 			}
-			log.Printf("Move %v executed", armyMove)
+			err = pubsub.PublishJSON(
+				ch,
+				routing.ExchangePerilTopic,
+				routing.ArmyMovesPrefix+"."+username,
+				armyMove,
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Move %v successfully executed", armyMove)
 		case "status":
 			gameState.CommandStatus()
 		case "help":
