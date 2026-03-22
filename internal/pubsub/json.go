@@ -8,6 +8,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+type AckType int
+
+const (
+	AckTypeAck AckType = iota
+	AckTypeNackRequeue
+	AckTypeNackDiscard
+)
+
 func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	marshaledVal, err := json.Marshal(val)
 	if err != nil {
@@ -27,7 +35,7 @@ func SubscribeJSON[T any](
     queueName,
     key string,
     queueType SimpleQueueType,
-    handler func(T),
+    handler func(T) AckType,
 ) error {
 	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 	if err != nil {
@@ -51,12 +59,44 @@ func SubscribeJSON[T any](
 			err := json.Unmarshal(m.Body, &body)
 			if err != nil {
 				log.Print(err)
+				err = m.Nack(false, false)
+				if err != nil {
+					log.Print(err)
+				} else {
+					log.Print("JSON unmarshal error: message not acknowledged and discarded")
+				}
 				continue
 			}
-			handler(body)
-			err = m.Ack(false)
-			if err != nil {
-				log.Print(err)
+			ackType := handler(body)
+			switch ackType {
+			case AckTypeAck:
+				err = m.Ack(false)
+				if err != nil {
+					log.Print(err)
+				} else {
+					log.Print("Message acknowledged")
+				}
+			case AckTypeNackRequeue:
+				err = m.Nack(false, true)
+				if err != nil {
+					log.Print(err)
+				} else {
+					log.Print("Message not acknowledged and requeued")
+				}
+			case AckTypeNackDiscard:
+				err = m.Nack(false, false)
+				if err != nil {
+					log.Print(err)
+				} else {
+					log.Print("Message not acknowledged and discarded")
+				}
+			default:
+				err = m.Nack(false, false)
+				if err != nil {
+					log.Print(err)
+				} else {
+					log.Print("Unexpexted AckType: message not acknowledged and discarded")
+				}
 			}
 		}
 	}()
