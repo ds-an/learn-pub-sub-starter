@@ -50,7 +50,19 @@ func main() {
 		queueNameArmyMoves,
 		routing.ArmyMovesPrefix+".*",
 		pubsub.QueueTypeTransient,
-		handlerMove(gameState),
+		handlerMove(gameState, ch),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.WarRecognitionsPrefix,
+		routing.WarRecognitionsPrefix+".*",
+		pubsub.QueueTypeDurable,
+		handlerWar(gameState),
 	)
 	if err != nil {
 		log.Fatal(err)
